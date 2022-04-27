@@ -24,6 +24,10 @@ normalize :: proc(v: Vector3) -> Vector3 {
   }
 }
 
+dot :: proc(a, b: Vector3) -> f32 {
+  return a.x * b.x + a.y * b.y + a.z * b.z
+}
+
 cross :: proc(a, b: Vector3) -> Vector3 {
 	i := a.yzx * b.zxy
 	j := a.zxy * b.yzx

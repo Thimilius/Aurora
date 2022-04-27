@@ -3,6 +3,8 @@ package aurora
 import "core:fmt"
 import random "core:math/rand"
 
+sphere: ^Sphere
+
 raytrace :: proc(width: i32, height: i32) {
   rand := random.create(0)
 
@@ -15,6 +17,8 @@ raytrace :: proc(width: i32, height: i32) {
   horizontal := Vector3{viewport_width, 0, 0}
   vertical := Vector3{0, viewport_height, 0}
   upper_left_corner := origin + horizontal / 2 + vertical / 2 - Vector3{0, 0, focal_length}
+
+  sphere = new_sphere(Vector3{0, 0, -1}, 0.5)
 
   for y in 0..<height {
     for x in 0..<width {
@@ -31,6 +35,10 @@ raytrace :: proc(width: i32, height: i32) {
 }
 
 trace :: proc(ray: Ray) -> Color {
+  if (intersect(ray, sphere)) {
+    return Color{1, 0, 0}
+  }
+
   d := normalize(ray.direction)
   t := 0.5 * (d.y + 1)
   return color_lerp(Color{1, 1, 1}, Color{0.5, 0.7, 1.0}, t)
