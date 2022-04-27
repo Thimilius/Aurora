@@ -1,6 +1,5 @@
 package aurora
 
-import "core:fmt"
 import sdl "vendor:sdl2"
 
 @(private="file")
