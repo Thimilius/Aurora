@@ -4,4 +4,4 @@ if not exist build\ (
   mkdir build
 )
 
-odin build aurora -out:build\aurora.exe
+odin build aurora -out:build\aurora.exe -debug
