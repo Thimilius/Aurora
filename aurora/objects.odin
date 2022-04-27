@@ -1,5 +1,7 @@
 package aurora
 
+import "core:math"
+
 Object :: struct {
   variant: union{^Sphere},
 }
@@ -28,18 +30,23 @@ new_sphere :: proc(center: Vector3, radius: f32) -> ^Sphere {
   return s
 }
 
-intersect :: proc(ray: Ray, object: ^Object) -> bool {
+intersect :: proc(ray: Ray, object: ^Object) -> f32 {
   switch o in object.variant {
     case ^Sphere: return intersect_sphere(ray, o)
-    case: return false
+    case: return 0.0
   }
 }
 
-intersect_sphere :: proc(ray: Ray, sphere: ^Sphere) -> bool {
+intersect_sphere :: proc(ray: Ray, sphere: ^Sphere) -> f32 {
   oc := ray.origin - sphere.center
-  a := dot(ray.direction, ray.direction)
-  b := 2.0 * dot(oc, ray.direction)
-  c := dot(oc, oc) - sphere.radius * sphere.radius
-  discriminant := b * b - 4 * a * c
-  return discriminant > 0
+  a := length_squared(ray.direction)
+  half_b := dot(oc, ray.direction)
+  c := length_squared(oc) - sphere.radius * sphere.radius
+  discriminant := half_b * half_b - a * c
+
+  if discriminant < 0.0 {
+    return -1.0
+  } else {
+    return (-half_b - math.sqrt(discriminant)) / a
+  }
 }

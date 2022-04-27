@@ -35,8 +35,10 @@ raytrace :: proc(width: i32, height: i32) {
 }
 
 trace :: proc(ray: Ray) -> Color {
-  if (intersect(ray, sphere)) {
-    return Color{1, 0, 0}
+  hit := intersect(ray, sphere)
+  if (hit > 0) {
+    n := normalize(ray_at(ray, hit) - Vector3{0, 0, -1})
+    return 0.5 * Color{n.x + 1, n.y + 1, n.z + 1}
   }
 
   d := normalize(ray.direction)
