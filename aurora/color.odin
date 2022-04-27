@@ -10,3 +10,7 @@ color_to_color24 :: proc(color: Color) -> Color24 {
 
   return Color24{r, g, b}
 }
+
+color_lerp :: proc(a, b: Color, t: f32) -> Color {
+  return (1.0 - t) * a + t * b
+}
