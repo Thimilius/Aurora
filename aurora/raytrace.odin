@@ -15,16 +15,16 @@ raytrace :: proc(scene: ^Scene, width: i32, height: i32) {
   origin := Vector3{0, 0, 0}
   horizontal := Vector3{viewport_width, 0, 0}
   vertical := Vector3{0, viewport_height, 0}
-  upper_left_corner := origin + horizontal / 2 + vertical / 2 - Vector3{0, 0, focal_length}
+  upper_left_corner := origin - horizontal / 2 + vertical / 2 - Vector3{0, 0, focal_length}
 
   for y in 0..<height {
     for x in 0..<width {
       pixel := Pixel{x, y}
 
-      u := cast(f32)(x) / cast(f32)(width)
-      v := cast(f32)(y) / cast(f32)(height)
+      u := cast(f32)(x) / cast(f32)(width - 1)
+      v := cast(f32)(y) / cast(f32)(height - 1)
 
-      ray := ray(origin, upper_left_corner - u * horizontal - v * vertical - origin)
+      ray := ray(origin, upper_left_corner + u * horizontal - v * vertical - origin)
       color := trace(scene, ray)
       aurora_set_pixel(pixel, color)
     }
