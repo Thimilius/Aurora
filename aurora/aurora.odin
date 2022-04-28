@@ -3,9 +3,9 @@ package aurora
 import sdl "vendor:sdl2"
 
 @(private="file")
-WINDOW_WIDTH  : i32 : 1280
+WINDOW_WIDTH  : u32 : 1280
 @(private="file")
-WINDOW_HEIGHT : i32 : 720
+WINDOW_HEIGHT : u32 : 720
 @(private="file")
 WINDOW_TITLE :: "Aurora"
 
@@ -24,7 +24,14 @@ aurora_main :: proc() {
   scene := new_scene()
   append(&scene.objects, new_sphere(Vector3{0, 0, -1}, 0.5))
   append(&scene.objects, new_sphere(Vector3{0, -100.5, -1}, 100))
-  raytrace(scene, WINDOW_WIDTH, WINDOW_HEIGHT)
+  
+  settings := Raytrace_Settings{}
+  settings.width = WINDOW_WIDTH
+  settings.height = WINDOW_HEIGHT
+  settings.samples_per_pixel = 1
+
+  raytrace(scene, settings)
+
   free_scene(scene)
 
   aurora_loop()
@@ -34,19 +41,22 @@ aurora_main :: proc() {
 aurora_initialize :: proc() {
   sdl.Init(sdl.INIT_VIDEO)
 
-  sdl.CreateWindowAndRenderer(WINDOW_WIDTH, WINDOW_HEIGHT, { .HIDDEN }, &aurora.window, &aurora.renderer)
+  sdl.CreateWindowAndRenderer(cast(i32)WINDOW_WIDTH, cast(i32)WINDOW_HEIGHT, { .HIDDEN }, &aurora.window, &aurora.renderer)
   sdl.SetWindowTitle(aurora.window, WINDOW_TITLE)
+  sdl.ShowWindow(aurora.window)
 }
 
-aurora_set_pixel :: proc(pixel: Pixel, color: Color) {
-  color24 := color_to_color24(color)
+aurora_set_pixel :: proc(pixel: Pixel, color: Color, samples: u32) {
+  scale := 1.0 / cast(f32)samples
+  c := scale * color
+  color24 := color_to_color24(c)
+
   sdl.SetRenderDrawColor(aurora.renderer, color24.r, color24.g, color24.b, 255)
-  sdl.RenderDrawPoint(aurora.renderer, pixel.x, pixel.y)
+  sdl.RenderDrawPoint(aurora.renderer, cast(i32)pixel.x, cast(i32)pixel.y)
 }
 
 aurora_loop :: proc() {
   sdl.RenderPresent(aurora.renderer)
-  sdl.ShowWindow(aurora.window)
   event: sdl.Event
   for {
     sdl.PollEvent(&event);

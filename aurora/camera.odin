@@ -9,7 +9,7 @@ Camera :: struct {
   upper_left_corner: Vector3,
 }
 
-make_camera :: proc(width: i32, height: i32) -> Camera {
+make_camera :: proc(width: u32, height: u32) -> Camera {
   aspect_ratio := cast(f32)width / cast(f32)height
   viewport_height : f32 = 2.0
   viewport_width : f32 = aspect_ratio * viewport_height

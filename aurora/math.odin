@@ -3,7 +3,7 @@ package aurora
 import "core:math"
 
 Vector2 :: [2]f32
-Pixel :: [2]i32
+Pixel :: [2]u32
 
 Vector3 :: [3]f32
 

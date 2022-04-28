@@ -4,21 +4,31 @@ import "core:fmt"
 import "core:math"
 import "core:math/rand"
 
-raytrace :: proc(scene: ^Scene, width: i32, height: i32) {
-  rand := rand.create(0)
+Raytrace_Settings :: struct {
+  width: u32,
+  height: u32,
 
-  camera := make_camera(width, height)
+  samples_per_pixel: u32,
+}
 
-  for y in 0..<height {
-    for x in 0..<width {
+raytrace :: proc(scene: ^Scene, settings: Raytrace_Settings) {
+  random := rand.create(0)
+
+  camera := make_camera(settings.width, settings.height)
+
+  for y in 0..<settings.height {
+    for x in 0..<settings.width {
       pixel := Pixel{x, y}
 
-      u := cast(f32)(x) / cast(f32)(width - 1)
-      v := cast(f32)(y) / cast(f32)(height - 1)
+      color := Color{}
+      for s in 0..<settings.samples_per_pixel {
+        u := (cast(f32)(x) + rand.float32(&random)) / cast(f32)(settings.width - 1)
+        v := (cast(f32)(y) + rand.float32(&random)) / cast(f32)(settings.height - 1)
 
-      ray := camera_get_ray(&camera, u, v)
-      color := trace(scene, ray)
-      aurora_set_pixel(pixel, color)
+        ray := camera_get_ray(&camera, u, v)
+        color += trace(scene, ray)
+      }
+      aurora_set_pixel(pixel, color, settings.samples_per_pixel)
     }
   }
 }
