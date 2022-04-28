@@ -39,7 +39,7 @@ Ray :: struct {
   direction: Vector3,
 }
 
-ray :: proc(origin: Vector3, direction: Vector3) -> Ray {
+make_ray :: proc(origin: Vector3, direction: Vector3) -> Ray {
   return Ray{origin, direction}
 }
 
