@@ -21,7 +21,11 @@ aurora := Aurora{}
 aurora_main :: proc() {
   aurora_initialize()
 
-  raytrace(WINDOW_WIDTH, WINDOW_HEIGHT)
+  scene := new_scene()
+  append(&scene.objects, new_sphere(Vector3{0, 0, -1}, 0.5))
+  append(&scene.objects, new_sphere(Vector3{0, -100.5, -1}, 100))
+  raytrace(scene, WINDOW_WIDTH, WINDOW_HEIGHT)
+  free_scene(scene)
 
   aurora_loop()
   aurora_shutdown()

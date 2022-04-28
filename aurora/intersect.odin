@@ -18,7 +18,7 @@ make_record :: proc(ray: Ray, hit_point: Vector3, t: f32, normal: Vector3) -> Hi
   return record
 }
 
-intersect :: proc(object: ^Object, ray: Ray, t_min: f32, t_max: f32) -> (bool, Hit_Record) {
+intersect_object :: proc(object: ^Object, ray: Ray, t_min: f32, t_max: f32) -> (bool, Hit_Record) {
   switch o in object.variant {
     case ^Sphere: return intersect_sphere(o, ray, t_min, t_max)
     case: return false, Hit_Record{}
