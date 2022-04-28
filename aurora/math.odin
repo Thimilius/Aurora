@@ -1,6 +1,7 @@
 package aurora
 
 import "core:math"
+import "core:math/rand"
 
 Vector2 :: [2]f32
 Pixel :: [2]u32
@@ -32,6 +33,20 @@ cross :: proc(a, b: Vector3) -> Vector3 {
 	i := a.yzx * b.zxy
 	j := a.zxy * b.yzx
 	return i - j
+}
+
+random_in_unit_sphere :: proc(random: ^rand.Rand) -> Vector3 {
+  for {
+    x := rand.float32_range(-1, 1, random)
+    y := rand.float32_range(-1, 1, random)
+    z := rand.float32_range(-1, 1, random)
+
+    p := Vector3{x, y, z}
+    if length_squared(p) >= 1 {
+      continue
+    }
+    return p
+  }
 }
 
 Ray :: struct {

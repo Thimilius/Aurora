@@ -1,7 +1,11 @@
 package aurora
 
+import "core:math/rand"
+
 Scene :: struct {
   objects: [dynamic]^Object,
+
+  random: rand.Rand,
 }
 
 new_scene :: proc() -> ^Scene {

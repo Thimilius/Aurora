@@ -1,5 +1,6 @@
 package aurora
 
+import "core:math/rand"
 import sdl "vendor:sdl2"
 
 @(private="file")
@@ -22,12 +23,14 @@ aurora_main :: proc() {
   aurora_initialize()
 
   scene := new_scene()
+  scene.random = rand.create(0)
   append(&scene.objects, new_sphere(Vector3{0, 0, -1}, 0.5))
   append(&scene.objects, new_sphere(Vector3{0, -100.5, -1}, 100))
   
   settings := Raytrace_Settings{}
   settings.width = WINDOW_WIDTH
   settings.height = WINDOW_HEIGHT
+  settings.max_depth = 50
   settings.samples_per_pixel = 1
 
   raytrace(scene, settings)
