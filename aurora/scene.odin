@@ -8,14 +8,14 @@ new_scene :: proc() -> ^Scene {
   return new(Scene)
 }
 
-free_scene_objects :: proc(scene: ^Scene) {
-  for object in scene.objects {
+free_scene_objects :: proc(using scene: ^Scene) {
+  for object in objects {
     free(object)
   }
-  clear(&scene.objects)
+  clear(&objects)
 }
 
-free_scene :: proc(scene: ^Scene) {
+free_scene :: proc(using scene: ^Scene) {
   free_scene_objects(scene)
   free(scene)
 }

@@ -25,5 +25,5 @@ make_camera :: proc(width: i32, height: i32) -> Camera {
 }
 
 camera_get_ray :: proc(using camera: ^Camera, u: f32, v: f32) -> Ray {
-  return make_ray(camera.origin, camera.upper_left_corner + u * camera.horizontal - v * camera.vertical - camera.origin)
+  return make_ray(origin, upper_left_corner + u * horizontal - v * vertical - origin)
 }

@@ -43,6 +43,6 @@ make_ray :: proc(origin: Vector3, direction: Vector3) -> Ray {
   return Ray{origin, direction}
 }
 
-ray_at :: proc(ray: Ray, t: f32) -> Vector3 {
-  return ray.origin + t * ray.direction
+ray_at :: proc(using ray: Ray, t: f32) -> Vector3 {
+  return origin + t * direction
 }
