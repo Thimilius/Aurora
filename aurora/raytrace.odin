@@ -1,12 +1,13 @@
 package aurora
 
 import "core:fmt"
-import random "core:math/rand"
+import "core:math"
+import "core:math/rand"
 
 sphere: ^Sphere
 
 raytrace :: proc(width: i32, height: i32) {
-  rand := random.create(0)
+  rand := rand.create(0)
 
   aspect_ratio := cast(f32)width / cast(f32)height
   viewport_height : f32 = 2.0
@@ -35,10 +36,10 @@ raytrace :: proc(width: i32, height: i32) {
 }
 
 trace :: proc(ray: Ray) -> Color {
-  hit := intersect(ray, sphere)
-  if (hit > 0) {
-    n := normalize(ray_at(ray, hit) - Vector3{0, 0, -1})
-    return 0.5 * Color{n.x + 1, n.y + 1, n.z + 1}
+  is_hit, hit_record := intersect(sphere, ray, 0, math.F32_MAX)
+
+  if (hit_record.t > 0) {
+    return 0.5 * (hit_record.normal + Color{1, 1, 1})
   }
 
   d := normalize(ray.direction)
