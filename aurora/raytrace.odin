@@ -38,7 +38,7 @@ trace_ray :: proc(scene: ^Scene, ray: Ray, depth: u32) -> Color {
     return Color{0, 0, 0}
   }
 
-  is_hit, hit_record := intersect_scene(scene, ray, 0, math.F32_MAX)
+  is_hit, hit_record := intersect_scene(scene, ray, 0.0001, math.F32_MAX)
 
   if (is_hit) {
     target := hit_record.point + hit_record.normal + random_in_unit_sphere(&scene.random)

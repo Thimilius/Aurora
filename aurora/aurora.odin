@@ -1,5 +1,6 @@
 package aurora
 
+import "core:math"
 import "core:math/rand"
 import sdl "vendor:sdl2"
 
@@ -31,7 +32,7 @@ aurora_main :: proc() {
   settings.width = WINDOW_WIDTH
   settings.height = WINDOW_HEIGHT
   settings.max_depth = 50
-  settings.samples_per_pixel = 1
+  settings.samples_per_pixel = 12
 
   raytrace(scene, settings)
 
@@ -51,7 +52,12 @@ aurora_initialize :: proc() {
 
 aurora_set_pixel :: proc(pixel: Pixel, color: Color, samples: u32) {
   scale := 1.0 / cast(f32)samples
-  c := scale * color
+
+  c := Color{}
+  c.r = math.sqrt(scale * color.r)
+  c.g = math.sqrt(scale * color.g)
+  c.b = math.sqrt(scale * color.b)
+
   color24 := color_to_color24(c)
 
   sdl.SetRenderDrawColor(aurora.renderer, color24.r, color24.g, color24.b, 255)
