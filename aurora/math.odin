@@ -35,6 +35,10 @@ cross :: proc(a, b: Vector3) -> Vector3 {
 	return i - j
 }
 
+reflect :: proc(v, n: Vector3) -> Vector3 {
+  return v - 2 * dot(v, n) * n
+}
+
 random_in_unit_sphere :: proc(random: ^rand.Rand) -> Vector3 {
   for {
     x := rand.float32_range(-1, 1, random)
