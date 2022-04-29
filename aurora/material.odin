@@ -32,11 +32,13 @@ Material_Metal :: struct {
   using material: Material,
 
   albedo: Color,
+  fuzz: f32,
 }
 
-new_material_metal :: proc(albedo: Color) -> ^Material_Metal {
+new_material_metal :: proc(albedo: Color, fuzz: f32) -> ^Material_Metal {
   m := new_material(Material_Metal)
   m.albedo = albedo
+  m.fuzz = fuzz < 1.0 ? fuzz : 1.0
   return m
 }
 
@@ -73,7 +75,7 @@ material_scatter_metal :: proc(material: ^Material_Metal, random: ^rand.Rand, ra
   reflected := reflect(normalize(ray.direction), record.normal)
 
   result := Material_Scatter_Result{}
-  result.scattered_ray = make_ray(record.point, reflected)
+  result.scattered_ray = make_ray(record.point, reflected + material.fuzz * random_in_unit_sphere(random))
   result.scattered = dot(result.scattered_ray.direction, record.normal) > 0.0
   result.attenuation = material.albedo
 

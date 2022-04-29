@@ -25,7 +25,7 @@ aurora_main :: proc() {
 
   material_center := new_material_lambert(Color{0.7, 0.3, 0.3})
   material_ground := new_material_lambert(Color{0.8, 0.8, 0.0})
-  material_metal := new_material_metal(Color{0.8, 0.8, 0.8})
+  material_metal := new_material_metal(Color{0.8, 0.8, 0.8}, 0.1)
 
   scene := new_scene()
   scene.random = rand.create(0)
