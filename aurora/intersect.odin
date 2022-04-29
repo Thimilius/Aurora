@@ -3,14 +3,17 @@ package aurora
 import "core:math"
 
 Hit_Record :: struct {
+  object: ^Object,
+
   point: Vector3,
   normal: Vector3,
   t: f32,
   front_face: bool,
 }
 
-make_record :: proc(ray: Ray, hit_point: Vector3, t: f32, normal: Vector3) -> Hit_Record {
+make_record :: proc(object: ^Object, ray: Ray, hit_point: Vector3, t: f32, normal: Vector3) -> Hit_Record {
   record := Hit_Record{}
+  record.object = object;
   record.t = t
   record.point = hit_point
   record.front_face = dot(ray.direction, normal) < 0.0
@@ -47,6 +50,6 @@ intersect_sphere :: proc(sphere: ^Sphere, ray: Ray, t_min: f32, t_max: f32) -> (
 
   hit_point := ray_at(ray, root)
   outward_normal := (hit_point - sphere.center) / sphere.radius
-  record := make_record(ray, hit_point, root, outward_normal)
+  record := make_record(sphere, ray, hit_point, root, outward_normal)
   return true, record
 }

@@ -23,10 +23,13 @@ aurora := Aurora{}
 aurora_main :: proc() {
   aurora_initialize()
 
+  lambert_material_center := new_material_lambert(Color{0.7, 0.3, 0.3})
+  lambert_material_ground := new_material_lambert(Color{0.8, 0.8, 0.0})
+
   scene := new_scene()
   scene.random = rand.create(0)
-  append(&scene.objects, new_sphere(Vector3{0, 0, -1}, 0.5))
-  append(&scene.objects, new_sphere(Vector3{0, -100.5, -1}, 100))
+  append(&scene.objects, new_sphere(lambert_material_center, Vector3{0, 0, -1}, 0.5))
+  append(&scene.objects, new_sphere(lambert_material_ground, Vector3{0, -100.5, -1}, 100))
   
   settings := Raytrace_Settings{}
   settings.width = WINDOW_WIDTH

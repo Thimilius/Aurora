@@ -49,6 +49,19 @@ random_in_unit_sphere :: proc(random: ^rand.Rand) -> Vector3 {
   }
 }
 
+random_unit_vector :: proc(random: ^rand.Rand) -> Vector3 {
+  return normalize(random_in_unit_sphere(random))
+}
+
+random_in_hemisphere :: proc(random: ^rand.Rand, normal: Vector3) -> Vector3 {
+  in_unit_sphere := random_in_unit_sphere(random)
+  if dot(in_unit_sphere, normal) > 0.0 {
+    return in_unit_sphere
+  } else {
+    return -in_unit_sphere
+  }
+}
+
 Ray :: struct {
   origin: Vector3,
   direction: Vector3,

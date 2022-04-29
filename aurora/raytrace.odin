@@ -39,10 +39,12 @@ trace_ray :: proc(scene: ^Scene, ray: Ray, depth: u32) -> Color {
   }
 
   is_hit, hit_record := intersect_scene(scene, ray, 0.0001, math.F32_MAX)
-
-  if (is_hit) {
-    target := hit_record.point + hit_record.normal + random_in_unit_sphere(&scene.random)
-    return 0.5 * trace_ray(scene, make_ray(hit_record.point, target - hit_record.point), depth - 1)
+  if is_hit {
+    scatter_result := material_scatter(hit_record.object.material, &scene.random, ray, &hit_record)
+    if scatter_result.scattered {
+      return scatter_result.attenuation * trace_ray(scene, scatter_result.scattered_ray, depth - 1)
+    }
+    return Color{0, 0, 0}
   }
 
   d := normalize(ray.direction)
