@@ -3,6 +3,10 @@ package aurora
 import "core:math"
 import "core:math/rand"
 
+fabs :: proc(f: f32) -> f32 {
+  return f > 0.0 ? f : -f
+}
+
 Vector2 :: [2]f32
 Pixel :: [2]u32
 
@@ -37,6 +41,10 @@ cross :: proc(a, b: Vector3) -> Vector3 {
 
 reflect :: proc(v, n: Vector3) -> Vector3 {
   return v - 2 * dot(v, n) * n
+}
+
+is_near_zero :: proc(v: Vector3) -> bool {
+  return (fabs(v[0]) < math.F32_EPSILON) && (fabs(v[1]) < math.F32_EPSILON) && (fabs(v[1]) < math.F32_EPSILON)
 }
 
 random_in_unit_sphere :: proc(random: ^rand.Rand) -> Vector3 {

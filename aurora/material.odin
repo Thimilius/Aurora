@@ -57,6 +57,9 @@ material_scatter :: proc(material: ^Material, random: ^rand.Rand, ray: Ray, reco
 
 material_scatter_lambert :: proc(material: ^Material_Lambert, random: ^rand.Rand, ray: Ray, record: ^Hit_Record) -> Material_Scatter_Result {
   scatter_direction := record.normal + random_unit_vector(random)
+  if is_near_zero(scatter_direction) {
+    scatter_direction = record.normal
+  }
 
   result := Material_Scatter_Result{}
   result.scattered = true
