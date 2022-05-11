@@ -34,7 +34,7 @@ raytrace :: proc(scene: ^Scene, settings: Raytrace_Settings) {
 }
 
 trace_ray :: proc(scene: ^Scene, ray: Ray, depth: u32) -> Color {
-  if (depth <= 0) {
+  if depth <= 0 {
     return Color{0, 0, 0}
   }
 
