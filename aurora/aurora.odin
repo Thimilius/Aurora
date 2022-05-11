@@ -2,7 +2,7 @@ package aurora
 
 import "core:math"
 import "core:math/rand"
-import "core:runtime"
+import "core:mem"
 import "core:fmt"
 import "core:thread"
 import "core:time"
@@ -69,8 +69,11 @@ aurora_raytrace :: proc() {
   append(&scene.objects, new_sphere(material_center, Vector3{0, 0, -1}, 0.5))
   append(&scene.objects, new_sphere(material_metal, Vector3{1, 0, -1}, 0.5))
 
-  t1 := thread.create_and_start_with_poly_data4(u32(0), u32(0), u32(1280), u32(720), aurora_raytrace_thread)
-  thread.join(t1)
+  t1 := thread.create_and_start_with_poly_data4(u32(0), u32(0), u32(640), u32(360), aurora_raytrace_thread)
+  t2 := thread.create_and_start_with_poly_data4(u32(640), u32(0), u32(1280), u32(360), aurora_raytrace_thread)
+  t3 := thread.create_and_start_with_poly_data4(u32(0), u32(360), u32(640), u32(720), aurora_raytrace_thread)
+  t4 := thread.create_and_start_with_poly_data4(u32(640), u32(360), u32(1280), u32(720), aurora_raytrace_thread)
+  thread.join_mulitple(t1, t2, t3, t4)
 }
 
 aurora_raytrace_thread :: proc(x: u32, y: u32, width: u32, height: u32) {
@@ -101,7 +104,7 @@ aurora_copy_to_window :: proc(pixels: [dynamic]Color24) {
   texture_pixels: rawptr
   pitch: i32
   sdl.LockTexture(aurora.texture, nil, &texture_pixels, &pitch)
-  runtime.mem_copy(texture_pixels, raw_data(pixels), (int)(WINDOW_WIDTH * WINDOW_HEIGHT * 3))
+  mem.copy(texture_pixels, raw_data(pixels), (int)(WINDOW_WIDTH * WINDOW_HEIGHT * 3))
   sdl.UnlockTexture(aurora.texture)
   sdl.RenderCopy(aurora.renderer, aurora.texture, nil, nil)
 }

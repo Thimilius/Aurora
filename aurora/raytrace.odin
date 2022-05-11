@@ -16,11 +16,11 @@ Raytrace_Settings :: struct {
 }
 
 raytrace :: proc(scene: ^Scene, settings: ^Raytrace_Settings) {
-  rect := settings.rect
-  camera := make_camera(rect.width, rect.height)
+  camera := make_camera(settings.full_width, settings.full_height)
 
-  for y in rect.x..<rect.height {
-    for x in rect.y..<rect.width {
+  rect := settings.rect
+  for y in rect.y..<rect.height {
+    for x in rect.x..<rect.width {
       pixel := Pixel{x, y}
 
       color := Color{}
