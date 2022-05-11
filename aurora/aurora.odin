@@ -2,6 +2,8 @@ package aurora
 
 import "core:math"
 import "core:math/rand"
+import "core:runtime"
+import "core:fmt"
 import sdl "vendor:sdl2"
 
 @(private="file")
@@ -15,6 +17,9 @@ WINDOW_TITLE :: "Aurora"
 Aurora :: struct {
   window: ^sdl.Window,
   renderer: ^sdl.Renderer,
+  texture: ^sdl.Texture,
+
+  pixels: [dynamic]Color24,
 }
 
 @(private="file")
@@ -53,6 +58,10 @@ aurora_initialize :: proc() {
 
   sdl.CreateWindowAndRenderer(cast(i32)WINDOW_WIDTH, cast(i32)WINDOW_HEIGHT, { .HIDDEN }, &aurora.window, &aurora.renderer)
   sdl.SetWindowTitle(aurora.window, WINDOW_TITLE)
+
+  aurora.texture = sdl.CreateTexture(aurora.renderer, cast(u32)sdl.PixelFormatEnum.RGB24, sdl.TextureAccess.STREAMING, cast(i32)WINDOW_WIDTH, cast(i32)WINDOW_HEIGHT)
+  resize(&aurora.pixels, cast(int)(WINDOW_WIDTH * WINDOW_HEIGHT))
+
   sdl.ShowWindow(aurora.window)
 }
 
@@ -66,12 +75,18 @@ aurora_set_pixel :: proc(pixel: Pixel, color: Color, samples: u32) {
 
   color24 := color_to_color24(c)
 
-  sdl.SetRenderDrawColor(aurora.renderer, color24.r, color24.g, color24.b, 255)
-  sdl.RenderDrawPoint(aurora.renderer, cast(i32)pixel.x, cast(i32)pixel.y)
+  aurora.pixels[pixel.x + (pixel.y * WINDOW_WIDTH)] = color24
 }
 
 aurora_loop :: proc() {
+  pixels: rawptr
+  pitch: i32
+  sdl.LockTexture(aurora.texture, nil, &pixels, &pitch)
+  runtime.mem_copy(pixels, raw_data(aurora.pixels), (int)(WINDOW_WIDTH * WINDOW_HEIGHT * 3))
+  sdl.UnlockTexture(aurora.texture)
+  sdl.RenderCopy(aurora.renderer, aurora.texture, nil, nil)
   sdl.RenderPresent(aurora.renderer)
+
   event: sdl.Event
   for {
     sdl.PollEvent(&event);
