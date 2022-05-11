@@ -12,6 +12,13 @@ Pixel :: [2]u32
 
 Vector3 :: [3]f32
 
+Rect :: struct {
+  x: u32,
+  y: u32,
+  width: u32,
+  height: u32,
+}
+
 length :: proc(v: Vector3) -> f32 {
   return math.sqrt(length_squared(v))
 }

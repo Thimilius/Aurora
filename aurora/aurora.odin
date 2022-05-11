@@ -4,6 +4,8 @@ import "core:math"
 import "core:math/rand"
 import "core:runtime"
 import "core:fmt"
+import "core:thread"
+import "core:time"
 import sdl "vendor:sdl2"
 
 @(private="file")
@@ -17,9 +19,11 @@ WINDOW_TITLE :: "Aurora"
 Aurora :: struct {
   window: ^sdl.Window,
   renderer: ^sdl.Renderer,
+  
   texture: ^sdl.Texture,
-
   pixels: [dynamic]Color24,
+
+  scene: ^Scene,
 }
 
 @(private="file")
@@ -49,6 +53,7 @@ aurora_initialize :: proc() {
 
 aurora_raytrace :: proc() {
   scene := new_scene()
+  aurora.scene = scene
   defer free_scene(scene)
   scene.random = rand.create(0)
 
@@ -63,14 +68,20 @@ aurora_raytrace :: proc() {
   append(&scene.objects, new_sphere(material_metal, Vector3{-1, 0, -1}, 0.5))
   append(&scene.objects, new_sphere(material_center, Vector3{0, 0, -1}, 0.5))
   append(&scene.objects, new_sphere(material_metal, Vector3{1, 0, -1}, 0.5))
-  
+
+  t1 := thread.create_and_start_with_poly_data4(u32(0), u32(0), u32(1280), u32(720), aurora_raytrace_thread)
+  thread.join(t1)
+}
+
+aurora_raytrace_thread :: proc(x: u32, y: u32, width: u32, height: u32) {
   settings := Raytrace_Settings{}
-  settings.width = WINDOW_WIDTH
-  settings.height = WINDOW_HEIGHT
+  settings.rect = Rect{ x, y, width, height }
+  settings.full_width = WINDOW_WIDTH
+  settings.full_height = WINDOW_HEIGHT
   settings.max_depth = 50
   settings.samples_per_pixel = 12
 
-  raytrace(scene, settings)
+  raytrace(aurora.scene, &settings)
 }
 
 aurora_set_pixel :: proc(pixel: Pixel, color: Color, samples: u32) {
