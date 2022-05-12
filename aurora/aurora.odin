@@ -43,6 +43,11 @@ aurora_main :: proc() {
 }
 
 aurora_initialize :: proc() {
+  aurora_initialize_window()  
+  aurora_initialize_scene()
+}
+
+aurora_initialize_window :: proc() {
   sdl.Init(sdl.INIT_VIDEO)
 
   sdl.CreateWindowAndRenderer(cast(i32)WINDOW_WIDTH, cast(i32)WINDOW_HEIGHT, { .HIDDEN }, &aurora.window, &aurora.renderer)
@@ -54,11 +59,10 @@ aurora_initialize :: proc() {
   sdl.ShowWindow(aurora.window)
 }
 
-aurora_raytrace :: proc() {
-  scene := new_scene()
-  scene.random = rand.create(0)
-
-  aurora.scene = scene
+aurora_initialize_scene :: proc() {
+  aurora.scene = new_scene()
+  scene := aurora.scene
+  scene.random = rand.create(0) // This is shared between threads!? Works but probably not ideal...
 
   material_center := new_material_lambert(Color{0.7, 0.3, 0.3})
   append(&aurora.materials, material_center)
@@ -71,11 +75,13 @@ aurora_raytrace :: proc() {
   append(&scene.objects, new_sphere(material_metal, Vector3{-1, 0, -1}, 0.5))
   append(&scene.objects, new_sphere(material_center, Vector3{0, 0, -1}, 0.5))
   append(&scene.objects, new_sphere(material_metal, Vector3{1, 0, -1}, 0.5))
+}
 
-  t1 := thread.create_and_start_with_poly_data4(u32(0), u32(0), u32(640), u32(360), aurora_raytrace_thread)
-  t2 := thread.create_and_start_with_poly_data4(u32(640), u32(0), u32(1280), u32(360), aurora_raytrace_thread)
-  t3 := thread.create_and_start_with_poly_data4(u32(0), u32(360), u32(640), u32(720), aurora_raytrace_thread)
-  t4 := thread.create_and_start_with_poly_data4(u32(640), u32(360), u32(1280), u32(720), aurora_raytrace_thread)
+aurora_raytrace :: proc() {
+  t1 := thread.create_and_start_with_poly_data4(u32(0), u32(0), u32(640), u32(360), aurora_raytrace_thread_main)
+  t2 := thread.create_and_start_with_poly_data4(u32(640), u32(0), u32(1280), u32(360), aurora_raytrace_thread_main)
+  t3 := thread.create_and_start_with_poly_data4(u32(0), u32(360), u32(640), u32(720), aurora_raytrace_thread_main)
+  t4 := thread.create_and_start_with_poly_data4(u32(640), u32(360), u32(1280), u32(720), aurora_raytrace_thread_main)
 
   append(&aurora.threads, t1)
   append(&aurora.threads, t2)
@@ -83,7 +89,7 @@ aurora_raytrace :: proc() {
   append(&aurora.threads, t4)
 }
 
-aurora_raytrace_thread :: proc(x: u32, y: u32, width: u32, height: u32) {
+aurora_raytrace_thread_main :: proc(x: u32, y: u32, width: u32, height: u32) {
   settings := Raytrace_Settings{}
   settings.rect = Rect{ x, y, width, height }
   settings.full_width = WINDOW_WIDTH
