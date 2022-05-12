@@ -17,7 +17,7 @@ WINDOW_HEIGHT : u32 : 720
 @(private="file")
 WINDOW_TITLE :: "Aurora"
 @(private="file")
-BLOCK_SIZE :: 16
+BLOCK_SIZE :: 80
 
 @(private="file")
 Aurora :: struct {
@@ -66,7 +66,18 @@ aurora_initialize_blocks :: proc() {
   aurora.texture = sdl.CreateTexture(aurora.renderer, cast(u32)sdl.PixelFormatEnum.RGB24, sdl.TextureAccess.STREAMING, cast(i32)WINDOW_WIDTH, cast(i32)WINDOW_HEIGHT)
   resize(&aurora.pixels, cast(int)(WINDOW_WIDTH * WINDOW_HEIGHT))
 
-  queue.push(&aurora.blocks, Rect{0, 0, 1280, 720})
+  block_count_x := WINDOW_WIDTH / BLOCK_SIZE
+  block_count_y := WINDOW_HEIGHT / BLOCK_SIZE
+  for block_y in 0..<block_count_y {
+    for block_x in 0..<block_count_x {
+      x := block_x * BLOCK_SIZE
+      y := block_y * BLOCK_SIZE
+      width := x + BLOCK_SIZE
+      height := y + BLOCK_SIZE
+      rect := Rect{ x, y, width, height }
+      queue.push(&aurora.blocks, rect)
+    } 
+  }
 }
 
 aurora_initialize_scene :: proc() {
@@ -100,21 +111,23 @@ aurora_raytrace :: proc() {
 }
 
 aurora_raytrace_thread_main :: proc(_: ^thread.Thread) {
-  sync.mutex_lock(&aurora.block_mutex)
-  rect, ok := queue.pop_front_safe(&aurora.blocks)
-  sync.mutex_unlock(&aurora.block_mutex)
-  if !ok {
-    return
+  for {
+    sync.mutex_lock(&aurora.block_mutex)
+    rect, ok := queue.pop_front_safe(&aurora.blocks)
+    sync.mutex_unlock(&aurora.block_mutex)
+    if !ok {
+      return
+    }
+
+    settings := Raytrace_Settings{}
+    settings.rect = rect
+    settings.full_width = WINDOW_WIDTH
+    settings.full_height = WINDOW_HEIGHT
+    settings.max_depth = 50
+    settings.samples_per_pixel = 12
+
+    raytrace(aurora.scene, &settings)
   }
-
-  settings := Raytrace_Settings{}
-  settings.rect = rect
-  settings.full_width = WINDOW_WIDTH
-  settings.full_height = WINDOW_HEIGHT
-  settings.max_depth = 50
-  settings.samples_per_pixel = 12
-
-  raytrace(aurora.scene, &settings)
 }
 
 aurora_set_pixel :: proc(pixel: Pixel, color: Color, samples: u32) {
