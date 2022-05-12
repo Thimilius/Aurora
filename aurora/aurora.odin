@@ -7,6 +7,7 @@ import "core:fmt"
 import "core:thread"
 import "core:time"
 import "core:sync"
+import "core:container/queue"
 import sdl "vendor:sdl2"
 
 @(private="file")
@@ -15,14 +16,18 @@ WINDOW_WIDTH  : u32 : 1280
 WINDOW_HEIGHT : u32 : 720
 @(private="file")
 WINDOW_TITLE :: "Aurora"
+@(private="file")
+BLOCK_SIZE :: 16
 
 @(private="file")
 Aurora :: struct {
   window: ^sdl.Window,
   renderer: ^sdl.Renderer,
-  
   texture: ^sdl.Texture,
+  
   pixels: [dynamic]Color24,
+  blocks: queue.Queue(Rect),
+  block_mutex: sync.Mutex,
 
   threads: [dynamic]^thread.Thread,
 
@@ -44,19 +49,24 @@ aurora_main :: proc() {
 
 aurora_initialize :: proc() {
   aurora_initialize_window()  
+  aurora_initialize_blocks()
   aurora_initialize_scene()
 }
 
 aurora_initialize_window :: proc() {
   sdl.Init(sdl.INIT_VIDEO)
-
   sdl.CreateWindowAndRenderer(cast(i32)WINDOW_WIDTH, cast(i32)WINDOW_HEIGHT, { .HIDDEN }, &aurora.window, &aurora.renderer)
   sdl.SetWindowTitle(aurora.window, WINDOW_TITLE)
+}
+
+aurora_initialize_blocks :: proc() {
+  assert(WINDOW_WIDTH % BLOCK_SIZE == 0)
+  assert(WINDOW_HEIGHT % BLOCK_SIZE == 0)
 
   aurora.texture = sdl.CreateTexture(aurora.renderer, cast(u32)sdl.PixelFormatEnum.RGB24, sdl.TextureAccess.STREAMING, cast(i32)WINDOW_WIDTH, cast(i32)WINDOW_HEIGHT)
   resize(&aurora.pixels, cast(int)(WINDOW_WIDTH * WINDOW_HEIGHT))
 
-  sdl.ShowWindow(aurora.window)
+  queue.push(&aurora.blocks, Rect{0, 0, 1280, 720})
 }
 
 aurora_initialize_scene :: proc() {
@@ -78,10 +88,10 @@ aurora_initialize_scene :: proc() {
 }
 
 aurora_raytrace :: proc() {
-  t1 := thread.create_and_start_with_poly_data4(u32(0), u32(0), u32(640), u32(360), aurora_raytrace_thread_main)
-  t2 := thread.create_and_start_with_poly_data4(u32(640), u32(0), u32(1280), u32(360), aurora_raytrace_thread_main)
-  t3 := thread.create_and_start_with_poly_data4(u32(0), u32(360), u32(640), u32(720), aurora_raytrace_thread_main)
-  t4 := thread.create_and_start_with_poly_data4(u32(640), u32(360), u32(1280), u32(720), aurora_raytrace_thread_main)
+  t1 := thread.create_and_start(aurora_raytrace_thread_main)
+  t2 := thread.create_and_start(aurora_raytrace_thread_main)
+  t3 := thread.create_and_start(aurora_raytrace_thread_main)
+  t4 := thread.create_and_start(aurora_raytrace_thread_main)
 
   append(&aurora.threads, t1)
   append(&aurora.threads, t2)
@@ -89,9 +99,16 @@ aurora_raytrace :: proc() {
   append(&aurora.threads, t4)
 }
 
-aurora_raytrace_thread_main :: proc(x: u32, y: u32, width: u32, height: u32) {
+aurora_raytrace_thread_main :: proc(_: ^thread.Thread) {
+  sync.mutex_lock(&aurora.block_mutex)
+  rect, ok := queue.pop_front_safe(&aurora.blocks)
+  sync.mutex_unlock(&aurora.block_mutex)
+  if !ok {
+    return
+  }
+
   settings := Raytrace_Settings{}
-  settings.rect = Rect{ x, y, width, height }
+  settings.rect = rect
   settings.full_width = WINDOW_WIDTH
   settings.full_height = WINDOW_HEIGHT
   settings.max_depth = 50
@@ -126,7 +143,7 @@ aurora_copy_to_window :: proc(pixels: [dynamic]Color24) {
 }
 
 aurora_loop :: proc() {
-  sdl.RenderPresent(aurora.renderer)
+  sdl.ShowWindow(aurora.window)
 
   event: sdl.Event
   for {
@@ -141,10 +158,13 @@ aurora_loop :: proc() {
 }
 
 aurora_shutdown :: proc() {
+  delete(aurora.pixels)
+  delete(aurora.threads)
   free_scene(aurora.scene)
   for material in aurora.materials {
     free_material(material)
   }
+  delete(aurora.materials)
 
   sdl.DestroyRenderer(aurora.renderer)
   sdl.DestroyWindow(aurora.window)

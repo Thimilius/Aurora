@@ -16,7 +16,7 @@ free_scene_objects :: proc(using scene: ^Scene) {
   for object in objects {
     free(object)
   }
-  clear(&objects)
+  delete(objects)
 }
 
 free_scene :: proc(using scene: ^Scene) {
