@@ -6,6 +6,7 @@ import "core:mem"
 import "core:fmt"
 import "core:thread"
 import "core:time"
+import "core:sync"
 import sdl "vendor:sdl2"
 
 @(private="file")
@@ -23,7 +24,10 @@ Aurora :: struct {
   texture: ^sdl.Texture,
   pixels: [dynamic]Color24,
 
+  threads: [dynamic]^thread.Thread,
+
   scene: ^Scene,
+  materials: [dynamic]^Material,
 }
 
 @(private="file")
@@ -33,7 +37,6 @@ aurora_main :: proc() {
   aurora_initialize()
 
   aurora_raytrace()
-  aurora_copy_to_window(aurora.pixels)
   aurora_loop()
 
   aurora_shutdown()
@@ -53,16 +56,16 @@ aurora_initialize :: proc() {
 
 aurora_raytrace :: proc() {
   scene := new_scene()
-  aurora.scene = scene
-  defer free_scene(scene)
   scene.random = rand.create(0)
 
+  aurora.scene = scene
+
   material_center := new_material_lambert(Color{0.7, 0.3, 0.3})
-  defer free_material(material_center)
+  append(&aurora.materials, material_center)
   material_ground := new_material_lambert(Color{0.8, 0.8, 0.0})
-  defer free_material(material_ground)
+  append(&aurora.materials, material_ground)
   material_metal := new_material_metal(Color{0.8, 0.8, 0.8}, 0.1)
-  defer free_material(material_metal)
+  append(&aurora.materials, material_metal)
 
   append(&scene.objects, new_sphere(material_ground, Vector3{0, -100.5, -1}, 100))
   append(&scene.objects, new_sphere(material_metal, Vector3{-1, 0, -1}, 0.5))
@@ -73,7 +76,11 @@ aurora_raytrace :: proc() {
   t2 := thread.create_and_start_with_poly_data4(u32(640), u32(0), u32(1280), u32(360), aurora_raytrace_thread)
   t3 := thread.create_and_start_with_poly_data4(u32(0), u32(360), u32(640), u32(720), aurora_raytrace_thread)
   t4 := thread.create_and_start_with_poly_data4(u32(640), u32(360), u32(1280), u32(720), aurora_raytrace_thread)
-  thread.join_mulitple(t1, t2, t3, t4)
+
+  append(&aurora.threads, t1)
+  append(&aurora.threads, t2)
+  append(&aurora.threads, t3)
+  append(&aurora.threads, t4)
 }
 
 aurora_raytrace_thread :: proc(x: u32, y: u32, width: u32, height: u32) {
@@ -104,7 +111,10 @@ aurora_copy_to_window :: proc(pixels: [dynamic]Color24) {
   texture_pixels: rawptr
   pitch: i32
   sdl.LockTexture(aurora.texture, nil, &texture_pixels, &pitch)
-  mem.copy(texture_pixels, raw_data(pixels), (int)(WINDOW_WIDTH * WINDOW_HEIGHT * 3))
+  
+  raw_pixels := raw_data(pixels)
+  mem.copy(texture_pixels, raw_pixels, (int)(WINDOW_WIDTH * WINDOW_HEIGHT * 3))
+
   sdl.UnlockTexture(aurora.texture)
   sdl.RenderCopy(aurora.renderer, aurora.texture, nil, nil)
 }
@@ -119,11 +129,17 @@ aurora_loop :: proc() {
       break
     }
     
+    aurora_copy_to_window(aurora.pixels)
     sdl.RenderPresent(aurora.renderer)
   }
 }
 
 aurora_shutdown :: proc() {
+  free_scene(aurora.scene)
+  for material in aurora.materials {
+    free_material(material)
+  }
+
   sdl.DestroyRenderer(aurora.renderer)
   sdl.DestroyWindow(aurora.window)
   sdl.Quit()
