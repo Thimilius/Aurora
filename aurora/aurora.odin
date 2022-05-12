@@ -7,6 +7,8 @@ import "core:fmt"
 import "core:thread"
 import "core:time"
 import "core:sync"
+import "core:os"
+import "core:sys/windows"
 import "core:container/queue"
 import sdl "vendor:sdl2"
 
@@ -99,15 +101,20 @@ aurora_initialize_scene :: proc() {
 }
 
 aurora_raytrace :: proc() {
-  t1 := thread.create_and_start(aurora_raytrace_thread_main)
-  t2 := thread.create_and_start(aurora_raytrace_thread_main)
-  t3 := thread.create_and_start(aurora_raytrace_thread_main)
-  t4 := thread.create_and_start(aurora_raytrace_thread_main)
+  thread_count := 8
+  when os.OS == .Windows {
+    system_info: windows.SYSTEM_INFO 
+    windows.GetSystemInfo(&system_info)
+    fmt.println(system_info.dwNumberOfProcessors)
+    if system_info.dwNumberOfProcessors > 0 {
+      thread_count = auto_cast system_info.dwNumberOfProcessors
+    }
+  }
 
-  append(&aurora.threads, t1)
-  append(&aurora.threads, t2)
-  append(&aurora.threads, t3)
-  append(&aurora.threads, t4)
+  for i in 0..thread_count {
+    thread := thread.create_and_start(aurora_raytrace_thread_main)
+    append(&aurora.threads, thread)
+  }
 }
 
 aurora_raytrace_thread_main :: proc(_: ^thread.Thread) {
