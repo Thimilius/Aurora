@@ -5,28 +5,25 @@ import "core:math"
 import "core:math/rand"
 
 Raytrace_Settings :: struct {
-  rect: Rect,
-
-  full_width: u32,
-  full_height: u32,
+  frame_width: u32,
+  frame_height: u32,
 
   max_depth: u32,
 
   samples_per_pixel: u32,
 }
 
-raytrace :: proc(scene: ^Scene, settings: ^Raytrace_Settings) {
-  camera := make_camera(settings.full_width, settings.full_height)
+raytrace :: proc(scene: ^Scene, rect: Rect, settings: ^Raytrace_Settings) {
+  camera := make_camera(settings.frame_width, settings.frame_height)
 
-  rect := settings.rect
   for y in rect.y..<rect.height {
     for x in rect.x..<rect.width {
       pixel := Pixel{x, y}
 
       color := Color{}
       for s in 0..<settings.samples_per_pixel {
-        u := (cast(f32)(x) + rand.float32(&scene.random)) / cast(f32)(settings.full_width - 1)
-        v := (cast(f32)(y) + rand.float32(&scene.random)) / cast(f32)(settings.full_height - 1)
+        u := (cast(f32)(x) + rand.float32(&scene.random)) / cast(f32)(settings.frame_width - 1)
+        v := (cast(f32)(y) + rand.float32(&scene.random)) / cast(f32)(settings.frame_height - 1)
 
         ray := camera_get_ray(&camera, u, v)
         color += trace_ray(scene, ray, settings.max_depth)

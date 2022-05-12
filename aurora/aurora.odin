@@ -26,7 +26,8 @@ Aurora :: struct {
   window: ^sdl.Window,
   renderer: ^sdl.Renderer,
   texture: ^sdl.Texture,
-  
+
+  settings: Raytrace_Settings,  
   pixels: [dynamic]Color24,
   blocks: queue.Queue(Rect),
   block_mutex: sync.Mutex,
@@ -51,22 +52,22 @@ aurora_main :: proc() {
 
 aurora_initialize :: proc() {
   aurora_initialize_window()  
-  aurora_initialize_blocks()
+  aurora_initialize_raytracer()
   aurora_initialize_scene()
 }
 
 aurora_initialize_window :: proc() {
   sdl.Init(sdl.INIT_VIDEO)
-  sdl.CreateWindowAndRenderer(cast(i32)WINDOW_WIDTH, cast(i32)WINDOW_HEIGHT, { .HIDDEN }, &aurora.window, &aurora.renderer)
+  sdl.CreateWindowAndRenderer(auto_cast WINDOW_WIDTH, auto_cast WINDOW_HEIGHT, { .HIDDEN }, &aurora.window, &aurora.renderer)
   sdl.SetWindowTitle(aurora.window, WINDOW_TITLE)
 }
 
-aurora_initialize_blocks :: proc() {
+aurora_initialize_raytracer :: proc() {
   assert(WINDOW_WIDTH % BLOCK_SIZE == 0)
   assert(WINDOW_HEIGHT % BLOCK_SIZE == 0)
 
-  aurora.texture = sdl.CreateTexture(aurora.renderer, cast(u32)sdl.PixelFormatEnum.RGB24, sdl.TextureAccess.STREAMING, cast(i32)WINDOW_WIDTH, cast(i32)WINDOW_HEIGHT)
-  resize(&aurora.pixels, cast(int)(WINDOW_WIDTH * WINDOW_HEIGHT))
+  aurora.texture = sdl.CreateTexture(aurora.renderer, auto_cast sdl.PixelFormatEnum.RGB24, sdl.TextureAccess.STREAMING, auto_cast WINDOW_WIDTH,  auto_cast WINDOW_HEIGHT)
+  resize(&aurora.pixels, auto_cast(WINDOW_WIDTH * WINDOW_HEIGHT))
 
   block_count_x := WINDOW_WIDTH / BLOCK_SIZE
   block_count_y := WINDOW_HEIGHT / BLOCK_SIZE
@@ -80,6 +81,11 @@ aurora_initialize_blocks :: proc() {
       queue.push(&aurora.blocks, rect)
     } 
   }
+  
+  aurora.settings.frame_width = WINDOW_WIDTH
+  aurora.settings.frame_height = WINDOW_HEIGHT
+  aurora.settings.max_depth = 50
+  aurora.settings.samples_per_pixel = 12
 }
 
 aurora_initialize_scene :: proc() {
@@ -126,19 +132,12 @@ aurora_raytrace_thread_main :: proc(_: ^thread.Thread) {
       return
     }
 
-    settings := Raytrace_Settings{}
-    settings.rect = rect
-    settings.full_width = WINDOW_WIDTH
-    settings.full_height = WINDOW_HEIGHT
-    settings.max_depth = 50
-    settings.samples_per_pixel = 12
-
-    raytrace(aurora.scene, &settings)
+    raytrace(aurora.scene, rect, &aurora.settings)
   }
 }
 
 aurora_set_pixel :: proc(pixel: Pixel, color: Color, samples: u32) {
-  scale := 1.0 / cast(f32)samples
+  scale := 1.0 / cast(f32) samples
 
   c := Color{}
   c.r = math.sqrt(scale * color.r)
