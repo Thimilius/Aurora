@@ -24,6 +24,13 @@ WINDOW_HEIGHT : u32 : 720
 WINDOW_TITLE :: "Aurora"
 @(private="file")
 BLOCK_SIZE :: 80
+@(private="file")
+BLOCK_PRIORITY :: Block_Priority.Spiral
+
+Block_Priority :: enum {
+  Linear,
+  Spiral,
+}
 
 @(private="file")
 Aurora :: struct {
@@ -88,17 +95,57 @@ aurora_initialize_raytracer :: proc() {
   block_count_x := WINDOW_WIDTH / BLOCK_SIZE
   block_count_y := WINDOW_HEIGHT / BLOCK_SIZE
   queue.reserve(&aurora.blocks, auto_cast (block_count_x * block_count_y))
+
+  rects: [dynamic]Rect
+  defer delete(rects)
+
   for block_y in 0..<block_count_y {
     for block_x in 0..<block_count_x {
       x := block_x * BLOCK_SIZE
       y := block_y * BLOCK_SIZE
       width := x + BLOCK_SIZE
       height := y + BLOCK_SIZE
+
       rect := Rect{ x, y, width, height }
-      queue.push(&aurora.blocks, rect)
+      append(&rects, rect)
     } 
   }
   
+  spiral :: proc(X: int, Y: int, rects: []Rect) {
+    // Taken from: https://stackoverflow.com/a/1555236
+    x, y, dx, dy: int
+    dy = -1
+    t := max(X, Y)
+    maxI := t * t
+    for i in 0..<maxI {
+      if ((-X / 2 <= x) && (x <= X / 2) && (-Y / 2 <= y) && (y <= Y / 2)) {
+        actual_x := x + (X / 2)
+        actual_x = X % 2 == 0 ? actual_x - 1 : actual_x
+        actual_y := y + (Y / 2)
+        actual_y = Y % 2 == 0 ? actual_y - 1 : actual_y
+
+        rect := rects[actual_x + (actual_y * X)]
+        queue.push(&aurora.blocks, rect)
+      }
+      if ((x == y) || ((x < 0) && (x == -y)) || ((x > 0) && (x == 1-y))) {
+            t = dx
+            dx = -dy
+            dy = t
+        }
+        x += dx
+        y += dy
+    }
+  }
+
+  switch BLOCK_PRIORITY {
+    case .Spiral: spiral(auto_cast block_count_x, auto_cast block_count_y, rects[:])
+    case .Linear: fallthrough
+    case:
+      for rect in rects {
+        queue.push(&aurora.blocks, rect)
+      }
+  }
+
   aurora.settings.frame_width = WINDOW_WIDTH
   aurora.settings.frame_height = WINDOW_HEIGHT
   aurora.settings.max_depth = 50
