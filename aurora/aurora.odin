@@ -216,6 +216,7 @@ aurora_loop :: proc() {
 
 aurora_shutdown :: proc() {
   for t in aurora.threads {
+    thread.terminate(t, 0)
     thread.destroy(t)
   }
   delete(aurora.threads)
