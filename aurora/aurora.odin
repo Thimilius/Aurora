@@ -195,8 +195,15 @@ aurora_loop :: proc() {
   event: sdl.Event
   for {
     sdl.PollEvent(&event);
-    if event.type == sdl.EventType.QUIT {
+    if event.type == .QUIT {
       break
+    } else if event.type == .KEYDOWN {
+      keysym := event.key.keysym
+      is_w := keysym.scancode == .W
+      has_mod := .LCTRL in keysym.mod || .RCTRL in keysym.mod
+      if is_w && has_mod {
+        break
+      }
     }
 
     raytracing_finished := true
