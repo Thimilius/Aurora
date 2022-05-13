@@ -16,23 +16,17 @@ when os.OS == .Windows {
   import "core:sys/windows"
 }
 
-@(private="file")
-WINDOW_WIDTH  : u32 : 1280
-@(private="file")
+WINDOW_WIDTH : u32 : 1280
 WINDOW_HEIGHT : u32 : 720
-@(private="file")
 WINDOW_TITLE :: "Aurora"
-@(private="file")
-BLOCK_SIZE :: 80
-@(private="file")
-BLOCK_PRIORITY :: Block_Priority.Spiral
+TILE_SIZE :: 80
+TILE_PRIORITY :: Tile_Priority.Spiral
 
-Block_Priority :: enum {
+Tile_Priority :: enum {
   Linear,
   Spiral,
 }
 
-@(private="file")
 Aurora :: struct {
   window: ^sdl.Window,
   renderer: ^sdl.Renderer,
@@ -40,8 +34,8 @@ Aurora :: struct {
 
   settings: Raytrace_Settings,  
   pixels: [dynamic]Color24,
-  blocks: queue.Queue(Rect),
-  block_mutex: sync.Mutex,
+  tile_queue: queue.Queue(Rect),
+  tile_mutex: sync.Mutex,
 
   threads: [dynamic]^thread.Thread,
   timer: time.Stopwatch,
@@ -86,25 +80,30 @@ aurora_initialize_window :: proc() {
 }
 
 aurora_initialize_raytracer :: proc() {
-  assert(WINDOW_WIDTH % BLOCK_SIZE == 0)
-  assert(WINDOW_HEIGHT % BLOCK_SIZE == 0)
+  assert(WINDOW_WIDTH % TILE_SIZE == 0)
+  assert(WINDOW_HEIGHT % TILE_SIZE == 0)
+
+  aurora.settings.frame_width = WINDOW_WIDTH
+  aurora.settings.frame_height = WINDOW_HEIGHT
+  aurora.settings.max_depth = 32
+  aurora.settings.samples_per_pixel = 12
 
   aurora.texture = sdl.CreateTexture(aurora.renderer, auto_cast sdl.PixelFormatEnum.RGB24, sdl.TextureAccess.STREAMING, auto_cast WINDOW_WIDTH, auto_cast WINDOW_HEIGHT)
   resize(&aurora.pixels, auto_cast(WINDOW_WIDTH * WINDOW_HEIGHT))
 
-  block_count_x := WINDOW_WIDTH / BLOCK_SIZE
-  block_count_y := WINDOW_HEIGHT / BLOCK_SIZE
-  queue.reserve(&aurora.blocks, auto_cast (block_count_x * block_count_y))
+  tile_count_x := WINDOW_WIDTH / TILE_SIZE
+  tile_count_y := WINDOW_HEIGHT / TILE_SIZE
+  queue.reserve(&aurora.tile_queue, auto_cast (tile_count_x * tile_count_y))
 
   rects: [dynamic]Rect
   defer delete(rects)
 
-  for block_y in 0..<block_count_y {
-    for block_x in 0..<block_count_x {
-      x := block_x * BLOCK_SIZE
-      y := block_y * BLOCK_SIZE
-      width := x + BLOCK_SIZE
-      height := y + BLOCK_SIZE
+  for tile_y in 0..<tile_count_y {
+    for tile_x in 0..<tile_count_x {
+      x := tile_x * TILE_SIZE
+      y := tile_y * TILE_SIZE
+      width := x + TILE_SIZE
+      height := y + TILE_SIZE
 
       rect := Rect{ x, y, width, height }
       append(&rects, rect)
@@ -125,7 +124,7 @@ aurora_initialize_raytracer :: proc() {
         actual_y = Y % 2 == 0 ? actual_y - 1 : actual_y
 
         rect := rects[actual_x + (actual_y * X)]
-        queue.push(&aurora.blocks, rect)
+        queue.push(&aurora.tile_queue, rect)
       }
       if ((x == y) || ((x < 0) && (x == -y)) || ((x > 0) && (x == 1-y))) {
             t = dx
@@ -137,21 +136,24 @@ aurora_initialize_raytracer :: proc() {
     }
   }
 
-  switch BLOCK_PRIORITY {
-    case .Spiral: spiral(auto_cast block_count_x, auto_cast block_count_y, rects[:])
+  switch TILE_PRIORITY {
+    case .Spiral: spiral(auto_cast tile_count_x, auto_cast tile_count_y, rects[:])
     case .Linear: fallthrough
     case:
       for rect in rects {
-        queue.push(&aurora.blocks, rect)
+        queue.push(&aurora.tile_queue, rect)
       }
   }
 
-  aurora.settings.frame_width = WINDOW_WIDTH
-  aurora.settings.frame_height = WINDOW_HEIGHT
-  aurora.settings.max_depth = 50
-  aurora.settings.samples_per_pixel = 12
-
-  log.infof("Initialized raytracer - Frame: %vx%v - Max depth: %v - Samples: %v.", WINDOW_WIDTH, WINDOW_HEIGHT, aurora.settings.max_depth, aurora.settings.samples_per_pixel)
+  log.infof(
+    "Initialized raytracer - Frame: %vx%v - Tiles: %vx%v - Max depth: %v - Samples: %v.",
+    WINDOW_WIDTH,
+    WINDOW_HEIGHT,
+    tile_count_x,
+    tile_count_y,
+    aurora.settings.max_depth,
+    aurora.settings.samples_per_pixel,
+  )
 }
 
 aurora_initialize_scene :: proc() {
@@ -199,9 +201,9 @@ aurora_get_thread_count :: proc() -> int {
 
 aurora_raytrace_thread_main :: proc(_: ^thread.Thread) {
   for {
-    sync.mutex_lock(&aurora.block_mutex)
-    rect, ok := queue.pop_front_safe(&aurora.blocks)
-    sync.mutex_unlock(&aurora.block_mutex)
+    sync.mutex_lock(&aurora.tile_mutex)
+    rect, ok := queue.pop_front_safe(&aurora.tile_queue)
+    sync.mutex_unlock(&aurora.tile_mutex)
     if !ok {
       return
     }
