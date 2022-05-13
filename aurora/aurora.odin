@@ -37,6 +37,7 @@ Aurora :: struct {
   block_mutex: sync.Mutex,
 
   threads: [dynamic]^thread.Thread,
+  timer: time.Stopwatch,
 
   scene: ^Scene,
   materials: [dynamic]^Material,
@@ -102,7 +103,7 @@ aurora_initialize_raytracer :: proc() {
   aurora.settings.max_depth = 50
   aurora.settings.samples_per_pixel = 12
 
-  log.infof("Initialized raytracer %vx%v - Max depth: %v - Samples: %v", WINDOW_WIDTH, WINDOW_HEIGHT, aurora.settings.max_depth, aurora.settings.samples_per_pixel)
+  log.infof("Initialized raytracer - Frame: %vx%v - Max depth: %v - Samples: %v.", WINDOW_WIDTH, WINDOW_HEIGHT, aurora.settings.max_depth, aurora.settings.samples_per_pixel)
 }
 
 aurora_initialize_scene :: proc() {
@@ -138,7 +139,8 @@ aurora_raytrace :: proc() {
     append(&aurora.threads, thread)
   }
 
-  log.info("Starting raytracing...")
+  log.infof("Starting raytracing using %v threads.", thread_count)
+  time.stopwatch_start(&aurora.timer)
 }
 
 aurora_raytrace_thread_main :: proc(_: ^thread.Thread) {
@@ -199,7 +201,12 @@ aurora_loop :: proc() {
     }
     if raytracing_finished && !had_raytracing_finish {
       had_raytracing_finish = true
-      log.infof("Finished raytracing")
+
+      time.stopwatch_stop(&aurora.timer)
+      duration := time.stopwatch_duration(aurora.timer)
+      seconds := time.duration_seconds(duration)
+
+      log.infof("Finished raytracing in %v seconds.", seconds)
     }
 
     aurora_copy_to_window(aurora.pixels)
