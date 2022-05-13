@@ -82,11 +82,12 @@ aurora_initialize_raytracer :: proc() {
   assert(WINDOW_WIDTH % BLOCK_SIZE == 0)
   assert(WINDOW_HEIGHT % BLOCK_SIZE == 0)
 
-  aurora.texture = sdl.CreateTexture(aurora.renderer, auto_cast sdl.PixelFormatEnum.RGB24, sdl.TextureAccess.STREAMING, auto_cast WINDOW_WIDTH,  auto_cast WINDOW_HEIGHT)
+  aurora.texture = sdl.CreateTexture(aurora.renderer, auto_cast sdl.PixelFormatEnum.RGB24, sdl.TextureAccess.STREAMING, auto_cast WINDOW_WIDTH, auto_cast WINDOW_HEIGHT)
   resize(&aurora.pixels, auto_cast(WINDOW_WIDTH * WINDOW_HEIGHT))
 
   block_count_x := WINDOW_WIDTH / BLOCK_SIZE
   block_count_y := WINDOW_HEIGHT / BLOCK_SIZE
+  queue.reserve(&aurora.blocks, auto_cast (block_count_x * block_count_y))
   for block_y in 0..<block_count_y {
     for block_x in 0..<block_count_x {
       x := block_x * BLOCK_SIZE
@@ -125,15 +126,7 @@ aurora_initialize_scene :: proc() {
 }
 
 aurora_raytrace :: proc() {
-  thread_count := 8
-  when os.OS == .Windows {
-    system_info: windows.SYSTEM_INFO 
-    windows.GetSystemInfo(&system_info)
-    if system_info.dwNumberOfProcessors > 0 {
-      thread_count = auto_cast system_info.dwNumberOfProcessors
-    }
-  }
-
+  thread_count := aurora_get_thread_count()
   for i in 0..thread_count {
     thread := thread.create_and_start(aurora_raytrace_thread_main)
     append(&aurora.threads, thread)
@@ -141,6 +134,20 @@ aurora_raytrace :: proc() {
 
   log.infof("Starting raytracing using %v threads.", thread_count)
   time.stopwatch_start(&aurora.timer)
+}
+
+aurora_get_thread_count :: proc() -> int {
+  result := 8
+
+  when os.OS == .Windows {
+    system_info: windows.SYSTEM_INFO 
+    windows.GetSystemInfo(&system_info)
+    if system_info.dwNumberOfProcessors > 0 {
+      result = auto_cast system_info.dwNumberOfProcessors
+    }
+  }
+
+  return result
 }
 
 aurora_raytrace_thread_main :: proc(_: ^thread.Thread) {
@@ -169,13 +176,13 @@ aurora_set_pixel :: proc(pixel: Pixel, color: Color, samples: u32) {
   aurora.pixels[pixel.x + (pixel.y * WINDOW_WIDTH)] = color24
 }
 
-aurora_copy_to_window :: proc(pixels: [dynamic]Color24) {
+aurora_copy_to_window :: proc(pixels: []Color24) {
   texture_pixels: rawptr
   pitch: i32
   sdl.LockTexture(aurora.texture, nil, &texture_pixels, &pitch)
   
   raw_pixels := raw_data(pixels)
-  mem.copy(texture_pixels, raw_pixels, (int)(WINDOW_WIDTH * WINDOW_HEIGHT * 3))
+  mem.copy(texture_pixels, raw_pixels, len(pixels) * size_of(pixels[0]))
 
   sdl.UnlockTexture(aurora.texture)
   sdl.RenderCopy(aurora.renderer, aurora.texture, nil, nil)
@@ -209,7 +216,7 @@ aurora_loop :: proc() {
       log.infof("Finished raytracing in %v seconds.", seconds)
     }
 
-    aurora_copy_to_window(aurora.pixels)
+    aurora_copy_to_window(aurora.pixels[:])
     sdl.RenderPresent(aurora.renderer)
   }
 }
@@ -219,14 +226,11 @@ aurora_shutdown :: proc() {
     thread.terminate(t, 0)
     thread.destroy(t)
   }
-  delete(aurora.threads)
 
-  delete(aurora.pixels)
   free_scene(aurora.scene)
   for material in aurora.materials {
     free_material(material)
   }
-  delete(aurora.materials)
 
   sdl.DestroyRenderer(aurora.renderer)
   sdl.DestroyWindow(aurora.window)
