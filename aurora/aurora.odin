@@ -8,9 +8,13 @@ import "core:thread"
 import "core:time"
 import "core:sync"
 import "core:os"
-import "core:sys/windows"
+import "core:log"
 import "core:container/queue"
 import sdl "vendor:sdl2"
+
+when os.OS == .Windows {
+  import "core:sys/windows"
+}
 
 @(private="file")
 WINDOW_WIDTH  : u32 : 1280
@@ -42,6 +46,17 @@ Aurora :: struct {
 aurora := Aurora{}
 
 aurora_main :: proc() {
+  context.logger = log.create_multi_logger(log.create_console_logger(opt = (log.Options{ .Level, .Terminal_Color } | log.Full_Timestamp_Opts)))
+  defer {
+    logger_data := cast(^log.Multi_Logger_Data)context.logger.data
+    for logger in logger_data.loggers {
+      l := logger
+      log.destroy_console_logger(&l)
+    }
+    logger := context.logger
+    log.destroy_multi_logger(&logger)
+  }
+
   aurora_initialize()
 
   aurora_raytrace()
@@ -86,6 +101,8 @@ aurora_initialize_raytracer :: proc() {
   aurora.settings.frame_height = WINDOW_HEIGHT
   aurora.settings.max_depth = 50
   aurora.settings.samples_per_pixel = 12
+
+  log.infof("Initialized raytracer %vx%v - Max depth: %v - Samples: %v", WINDOW_WIDTH, WINDOW_HEIGHT, aurora.settings.max_depth, aurora.settings.samples_per_pixel)
 }
 
 aurora_initialize_scene :: proc() {
@@ -111,7 +128,6 @@ aurora_raytrace :: proc() {
   when os.OS == .Windows {
     system_info: windows.SYSTEM_INFO 
     windows.GetSystemInfo(&system_info)
-    fmt.println(system_info.dwNumberOfProcessors)
     if system_info.dwNumberOfProcessors > 0 {
       thread_count = auto_cast system_info.dwNumberOfProcessors
     }
@@ -121,6 +137,8 @@ aurora_raytrace :: proc() {
     thread := thread.create_and_start(aurora_raytrace_thread_main)
     append(&aurora.threads, thread)
   }
+
+  log.info("Starting raytracing...")
 }
 
 aurora_raytrace_thread_main :: proc(_: ^thread.Thread) {
@@ -164,21 +182,38 @@ aurora_copy_to_window :: proc(pixels: [dynamic]Color24) {
 aurora_loop :: proc() {
   sdl.ShowWindow(aurora.window)
 
+  had_raytracing_finish := false
   event: sdl.Event
   for {
     sdl.PollEvent(&event);
     if event.type == sdl.EventType.QUIT {
       break
     }
-    
+
+    raytracing_finished := true
+    for t in aurora.threads {
+      if !thread.is_done(t) {
+        raytracing_finished = false
+        break
+      }
+    }
+    if raytracing_finished && !had_raytracing_finish {
+      had_raytracing_finish = true
+      log.infof("Finished raytracing")
+    }
+
     aurora_copy_to_window(aurora.pixels)
     sdl.RenderPresent(aurora.renderer)
   }
 }
 
 aurora_shutdown :: proc() {
-  delete(aurora.pixels)
+  for t in aurora.threads {
+    thread.destroy(t)
+  }
   delete(aurora.threads)
+
+  delete(aurora.pixels)
   free_scene(aurora.scene)
   for material in aurora.materials {
     free_material(material)
