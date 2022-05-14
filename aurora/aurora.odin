@@ -48,7 +48,7 @@ Aurora :: struct {
 aurora := Aurora{}
 
 aurora_main :: proc() {
-  context.logger = log.create_multi_logger(log.create_console_logger(opt = (log.Options{ .Level, .Terminal_Color } | log.Full_Timestamp_Opts)))
+  context.logger = log.create_multi_logger(log.create_console_logger(opt = (log.Options{ .Level, .Time })))
   defer {
     logger_data := cast(^log.Multi_Logger_Data)context.logger.data
     for logger in logger_data.loggers {
