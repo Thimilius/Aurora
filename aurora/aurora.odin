@@ -173,7 +173,7 @@ aurora_initialize_scene :: proc() {
   scene.random = rand.create(0) // This is shared between threads!? Works but probably not ideal...
 
   aspect_ratio := cast(f32)aurora.settings.frame_width / cast(f32)aurora.settings.frame_height
-  scene.camera = make_camera(Vector3{ 0, 0, 2 }, Vector3{ 0, 0, -1 }, Vector3{ 0, 1, 0 }, 60, aspect_ratio)
+  scene.camera = make_camera(Vector3{ 0, 0, 2 }, Vector3{ 0, 0, 0 }, Vector3{ 0, 1, 0 }, 60, aspect_ratio)
 
   material_center := new_material_lambert(Color{0.7, 0.3, 0.3})
   append(&aurora.materials, material_center)

@@ -7,13 +7,13 @@ fabs :: proc(f: f32) -> f32 {
   return f > 0.0 ? f : -f
 }
 
-Vector2 :: [2]f32
-Pixel :: [2]u32
+Vector2 :: distinct [2]f32
+Pixel :: distinct [2]u32
 
-Vector3 :: [3]f32
-Vector4 :: [4]f32
+Vector3 :: distinct [3]f32
+Vector4 :: distinct [4]f32
 
-Matrix4x4 :: matrix[4, 4]f32
+Matrix4x4 :: distinct matrix[4, 4]f32
 
 Rect :: struct {
   x: u32,

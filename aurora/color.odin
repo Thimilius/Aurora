@@ -1,7 +1,7 @@
 package aurora
 
-Color :: [3]f32
-Color24 :: [3]u8
+Color :: distinct [3]f32
+Color24 :: distinct [3]u8
 
 color_to_color24 :: proc(color: Color) -> Color24 {
   r := cast(u8)(color.r * 255)
