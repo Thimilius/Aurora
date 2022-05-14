@@ -172,6 +172,9 @@ aurora_initialize_scene :: proc() {
   scene := aurora.scene
   scene.random = rand.create(0) // This is shared between threads!? Works but probably not ideal...
 
+  aspect_ratio := cast(f32)aurora.settings.frame_width / cast(f32)aurora.settings.frame_height
+  scene.camera = make_camera(Vector3{ 0, 0, 2 }, Vector3{ 0, 0, -1 }, Vector3{ 0, 1, 0 }, 60, aspect_ratio)
+
   material_center := new_material_lambert(Color{0.7, 0.3, 0.3})
   append(&aurora.materials, material_center)
   material_ground := new_material_lambert(Color{0.8, 0.8, 0.0})
@@ -179,10 +182,10 @@ aurora_initialize_scene :: proc() {
   material_metal := new_material_metal(Color{0.8, 0.8, 0.8}, 0.1)
   append(&aurora.materials, material_metal)
 
-  append(&scene.objects, new_sphere(material_ground, Vector3{0, -100.5, -1}, 100))
-  append(&scene.objects, new_sphere(material_metal, Vector3{-1, 0, -1}, 0.5))
-  append(&scene.objects, new_sphere(material_center, Vector3{0, 0, -1}, 0.5))
-  append(&scene.objects, new_sphere(material_metal, Vector3{1, 0, -1}, 0.5))
+  append(&scene.objects, new_sphere(material_ground, Vector3{0, -100.5, 0}, 100))
+  append(&scene.objects, new_sphere(material_metal, Vector3{-1, 0, 0}, 0.5))
+  append(&scene.objects, new_sphere(material_center, Vector3{0, 0, 0}, 0.5))
+  append(&scene.objects, new_sphere(material_metal, Vector3{1, 0, 0}, 0.5))
 }
 
 aurora_raytrace :: proc() {

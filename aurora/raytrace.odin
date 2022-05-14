@@ -14,9 +14,6 @@ Raytrace_Settings :: struct {
 }
 
 raytrace :: proc(scene: ^Scene, rect: Rect, settings: ^Raytrace_Settings) {
-  aspect_ratio := cast(f32)settings.frame_width / cast(f32)settings.frame_height
-  camera := make_camera(Vector3{ 0, 0, 1 }, Vector3{ 0, 0, -1 }, Vector3{ 0, 1, 0 }, 60, aspect_ratio)
-
   for y in rect.y..<rect.height {
     for x in rect.x..<rect.width {
       pixel := Pixel{x, y}
@@ -26,7 +23,7 @@ raytrace :: proc(scene: ^Scene, rect: Rect, settings: ^Raytrace_Settings) {
         u := (cast(f32)(x) + rand.float32(&scene.random)) / cast(f32)(settings.frame_width - 1)
         v := (cast(f32)(y) + rand.float32(&scene.random)) / cast(f32)(settings.frame_height - 1)
 
-        ray := camera_get_ray(&camera, u, v)
+        ray := camera_get_ray(&scene.camera, u, v)
         color += trace_ray(scene, ray, settings.max_depth)
       }
       aurora_set_pixel(pixel, color, settings.samples_per_pixel)

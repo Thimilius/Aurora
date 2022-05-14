@@ -3,6 +3,8 @@ package aurora
 import "core:math/rand"
 
 Scene :: struct {
+  camera: Camera,
+
   objects: [dynamic]^Object,
 
   random: rand.Rand,
