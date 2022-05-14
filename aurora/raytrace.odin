@@ -43,7 +43,9 @@ trace_ray :: proc(scene: ^Scene, ray: Ray, depth: u32) -> Color {
   if is_hit {
     scatter_result := material_scatter(hit_record.object.material, &scene.random, ray, &hit_record)
     if scatter_result.scattered {
-      return scatter_result.attenuation * trace_ray(scene, scatter_result.scattered_ray, depth - 1)
+      // We have to remember to transform the scattered ray from local space to world space.
+      scattered_ray := ray_transform(scatter_result.scattered_ray, hit_record.object.transform)
+      return scatter_result.attenuation * trace_ray(scene, scattered_ray, depth - 1)
     }
     return Color{0, 0, 0}
   }

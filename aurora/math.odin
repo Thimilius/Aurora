@@ -11,6 +11,9 @@ Vector2 :: [2]f32
 Pixel :: [2]u32
 
 Vector3 :: [3]f32
+Vector4 :: [4]f32
+
+Matrix4x4 :: matrix[4, 4]f32
 
 Rect :: struct {
   x: u32,
@@ -54,6 +57,14 @@ is_near_zero :: proc(v: Vector3) -> bool {
   return (fabs(v[0]) < math.F32_EPSILON) && (fabs(v[1]) < math.F32_EPSILON) && (fabs(v[1]) < math.F32_EPSILON)
 }
 
+to_vec3 :: proc(v: Vector4) -> Vector3 {
+  return Vector3{v.x, v.y, v.z}
+}
+
+to_vec4 :: proc(v: Vector3, w: f32) -> Vector4 {
+  return Vector4{v.x, v.y, v.z, w}
+}
+
 random_in_unit_sphere :: proc(random: ^rand.Rand) -> Vector3 {
   for {
     x := rand.float32_range(-1, 1, random)
@@ -92,4 +103,10 @@ make_ray :: proc(origin: Vector3, direction: Vector3) -> Ray {
 
 ray_at :: proc(using ray: Ray, t: f32) -> Vector3 {
   return origin + t * direction
+}
+
+ray_transform :: proc(using ray: Ray, transform: Matrix4x4) -> Ray {
+  transformed_origin := to_vec3(transform * to_vec4(origin, 1))
+  transformed_direction := to_vec3(transform * to_vec4(direction, 0))
+  return Ray{transformed_origin, transformed_direction}
 }
