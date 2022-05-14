@@ -14,7 +14,8 @@ Raytrace_Settings :: struct {
 }
 
 raytrace :: proc(scene: ^Scene, rect: Rect, settings: ^Raytrace_Settings) {
-  camera := make_camera(settings.frame_width, settings.frame_height)
+  aspect_ratio := cast(f32)settings.frame_width / cast(f32)settings.frame_height
+  camera := make_camera(Vector3{ 0, 0, 1 }, Vector3{ 0, 0, -1 }, Vector3{ 0, 1, 0 }, 60, aspect_ratio)
 
   for y in rect.y..<rect.height {
     for x in rect.x..<rect.width {
