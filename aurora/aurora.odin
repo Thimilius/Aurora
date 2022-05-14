@@ -20,9 +20,10 @@ WINDOW_WIDTH : u32 : 1280
 WINDOW_HEIGHT : u32 : 720
 WINDOW_TITLE :: "Aurora"
 TILE_SIZE :: 80
-TILE_PRIORITY :: Tile_Priority.Spiral
+TILE_ORDER :: Tile_Order.Spiral
+ALLOW_TEMP :: true
 
-Tile_Priority :: enum {
+Tile_Order :: enum {
   Linear,
   Spiral,
 }
@@ -33,8 +34,10 @@ Aurora :: struct {
   texture: ^sdl.Texture,
 
   settings: Raytrace_Settings,  
+  temp_settings: Raytrace_Settings,
   pixels: [dynamic]Color24,
   tile_queue: queue.Queue(Rect),
+  temp_tile_queue: queue.Queue(Rect),
   tile_mutex: sync.Mutex,
 
   threads: [dynamic]^thread.Thread,
@@ -88,12 +91,18 @@ aurora_initialize_raytracer :: proc() {
   aurora.settings.max_depth = 32
   aurora.settings.samples_per_pixel = 12
 
+  aurora.temp_settings.frame_width = WINDOW_WIDTH
+  aurora.temp_settings.frame_height = WINDOW_HEIGHT
+  aurora.temp_settings.max_depth = 4
+  aurora.temp_settings.samples_per_pixel = 1
+
   aurora.texture = sdl.CreateTexture(aurora.renderer, auto_cast sdl.PixelFormatEnum.RGB24, sdl.TextureAccess.STREAMING, auto_cast WINDOW_WIDTH, auto_cast WINDOW_HEIGHT)
   resize(&aurora.pixels, auto_cast(WINDOW_WIDTH * WINDOW_HEIGHT))
 
   tile_count_x := WINDOW_WIDTH / TILE_SIZE
   tile_count_y := WINDOW_HEIGHT / TILE_SIZE
   queue.reserve(&aurora.tile_queue, auto_cast (tile_count_x * tile_count_y))
+  queue.reserve(&aurora.temp_tile_queue, auto_cast (tile_count_x * tile_count_y))
 
   rects: [dynamic]Rect
   defer delete(rects)
@@ -125,6 +134,7 @@ aurora_initialize_raytracer :: proc() {
 
         rect := rects[actual_x + (actual_y * X)]
         queue.push(&aurora.tile_queue, rect)
+        queue.push(&aurora.temp_tile_queue, rect)
       }
       if ((x == y) || ((x < 0) && (x == -y)) || ((x > 0) && (x == 1-y))) {
             t = dx
@@ -136,12 +146,13 @@ aurora_initialize_raytracer :: proc() {
     }
   }
 
-  switch TILE_PRIORITY {
+  switch TILE_ORDER {
     case .Spiral: spiral(auto_cast tile_count_x, auto_cast tile_count_y, rects[:])
     case .Linear: fallthrough
     case:
       for rect in rects {
         queue.push(&aurora.tile_queue, rect)
+        queue.push(&aurora.temp_tile_queue, rect)
       }
   }
 
@@ -201,15 +212,32 @@ aurora_get_thread_count :: proc() -> int {
 
 aurora_raytrace_thread_main :: proc(_: ^thread.Thread) {
   for {
-    sync.mutex_lock(&aurora.tile_mutex)
-    rect, ok := queue.pop_front_safe(&aurora.tile_queue)
-    sync.mutex_unlock(&aurora.tile_mutex)
+    rect, ok, temp := aurora_get_next_tile()
     if !ok {
       return
     }
 
-    raytrace(aurora.scene, rect, &aurora.settings)
+    raytrace(aurora.scene, rect, temp ? &aurora.temp_settings : &aurora.settings)
   }
+}
+
+aurora_get_next_tile :: proc() -> (rect: Rect, ok: bool, temp: bool) {
+  sync.mutex_lock(&aurora.tile_mutex)
+  defer sync.mutex_unlock(&aurora.tile_mutex)
+
+  if ALLOW_TEMP {
+    temp = true
+    rect, ok = queue.pop_front_safe(&aurora.temp_tile_queue)
+    if !ok {
+      temp = false
+      rect, ok = queue.pop_front_safe(&aurora.tile_queue)
+    }  
+  } else {
+    temp = false
+    rect, ok = queue.pop_front_safe(&aurora.tile_queue)
+  }
+  
+  return
 }
 
 aurora_set_pixel :: proc(pixel: Pixel, color: Color, samples: u32) {
