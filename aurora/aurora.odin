@@ -56,7 +56,7 @@ aurora_main :: proc() {
     logger_data := cast(^log.Multi_Logger_Data)context.logger.data
     for logger in logger_data.loggers {
       l := logger
-      log.destroy_console_logger(&l)
+      log.destroy_console_logger(l)
     }
     logger := context.logger
     log.destroy_multi_logger(&logger)
@@ -190,7 +190,7 @@ aurora_initialize_scene :: proc() {
 
 aurora_raytrace :: proc() {
   thread_count := aurora_get_thread_count()
-  for i in 0..thread_count {
+  for i in 0..<thread_count {
     thread := thread.create_and_start(aurora_raytrace_thread_main)
     append(&aurora.threads, thread)
   }
